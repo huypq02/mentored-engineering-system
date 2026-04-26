@@ -1,28 +1,133 @@
-# 5-Agent Mentored Engineering System (v2)
+# Mentored Engineering System for Claude Code (v4)
 
-A multi-agent Claude Code setup for engineers growing into a senior AI/ML + DevOps role. Learning-first, not automation-first. Redesigned after a real review round to fix friction points.
+A multi-agent setup for engineers growing into senior AI/ML + DevOps roles. Learning-first, not automation-first. Now with **deterministic escalation triggers**, **Size × Risk triage**, **confidence propagation**, **prototype mode**, and **shared state via `agent_state.md`**.
 
-## What's new in v2
+## What's new in v4
 
-Compared to v1, this version fixes five real-world friction points:
+v3 had the right architecture and right model routing. v4 closes five real-world failure modes that would only show up after weeks of use:
 
-1. **Task-size triage** — mentor classifies every task as XS/S/M/L and routes accordingly. No more 4-agent ceremony for a 10-line fix.
-2. **Sharp mentor / researcher boundary** — mentor gets ONE search per response; anything bigger goes to researcher. Quantitative, not fuzzy.
-3. **Planner is now read-only** — Bash removed. Can't inspect runtime state, must state assumptions as open questions. Role purity preserved.
-4. **Implementer has learn mode and ship mode** — default is verbose + teaching; "ship mode" on request for production speed.
-5. **Feedback loops added** — mentor critiques planner's plan before implementer runs it; debugger reports design-level findings back to planner; implementer escalates to mentor when it detects conceptual confusion.
+1. **Deterministic escalation triggers** — every lightweight agent now has an explicit checklist. If any item is checked, escalate. No judgment calls, no drift.
+2. **Size × Risk as first-class triage** — a 15-line concurrency patch is "S" by size but "High" by risk. Mentor classifies on both dimensions and routes accordingly.
+3. **Hard "interpretation = escalation" rule for Haiku** — `implementer-fast` escalates the moment a spec needs interpretation. Prevents the "Haiku confidently does the wrong thing" failure mode.
+4. **Confidence propagation** — `planner` outputs Low/Medium/High confidence; `mentor` and `implementer` adapt behavior based on it. `debugger` rates confidence in root cause too.
+5. **Prototype mode** — explicit fast-path that bypasses ceremony for exploratory work. "Harden it" command re-triages as M and runs full flow on the prototype.
 
-Plus one bonus: debugger now does proactive "quick reviews" after non-trivial implementer steps.
+Plus: optional **`agent_state.md`** at repo root — a user-owned shared scratchpad agents read for context. Stops re-litigation of settled decisions across long sessions.
 
-## Agents
+---
 
-| Agent | Role | Tools | Model |
-|---|---|---|---|
-| **mentor** | Triage, teach, critique plans, route | Read, Grep, Glob, WebSearch, WebFetch | opus |
-| **planner** | Plans changes (read-only, no execution) | Read, Grep, Glob, WebSearch, WebFetch | opus |
-| **implementer** | Executes plan (learn/ship mode) | Read, Write, Edit, Bash, Grep, Glob, WebSearch, WebFetch | sonnet |
-| **debugger** | Debug + review + quick-review + design feedback | Read, Edit, Bash, Grep, Glob, WebSearch, WebFetch | opus |
-| **researcher** | Multi-source research (2+ searches minimum) | WebSearch, WebFetch, Read, Grep | opus |
+## All 8 agents (+ template)
+
+| Agent | Role | Model |
+|---|---|---|
+| `mentor` | Triage on Size×Risk, teach, critique plans | Opus |
+| `mentor-light` | Compressed teaching for plain S × Low | Sonnet |
+| `planner` | Plans M/L changes (read-only, with Confidence) | Opus |
+| `implementer` | Executes plans for M/L (learn/ship modes) | Sonnet |
+| `implementer-fast` | XS/S × Low execution, prototype mode | Haiku |
+| `debugger` | Hypothesis-driven debug + review for M/L | Opus |
+| `debugger-light` | Compressed debug + quick review for S × Low | Sonnet |
+| `researcher` | Multi-source research (2+ search threshold) | Opus |
+| `agent_state.md` | User-owned shared context (template) | n/a |
+
+---
+
+## Triage: Size × Risk
+
+Mentor classifies every task on both dimensions:
+
+### Size
+
+| | Definition |
+|---|---|
+| **XS** | < 20 lines, obvious fix, typo, rename, one-liner |
+| **S** | Single file, clear scope, no architectural decisions |
+| **M** | Multi-file, some risk, or new pattern |
+| **L** | Architectural, cross-cutting, novel territory |
+
+### Risk
+
+| | Triggers (any one) |
+|---|---|
+| **Low** | None of the High triggers apply |
+| **High** | Concurrency, async, threads, shared state. Security (auth, secrets, injection, permissions). Data integrity (migrations, irreversible writes, financial). Production blast radius. Reproducibility-critical ML. External API contracts. User-flagged risk. |
+
+### Routing
+
+| Triage | Flow |
+|---|---|
+| **XS × Low** | `implementer-fast` (Haiku) |
+| **XS × High** | `mentor` (Opus) → `implementer` (Sonnet) |
+| **S × Low** | `mentor-light` (Sonnet) → `implementer-fast` (Haiku) → optional `debugger-light` |
+| **S × High** | `mentor` (Opus) → `implementer` (Sonnet) → `debugger` (Opus) |
+| **M × Low** | `mentor` → `planner` → critique → `implementer` → `debugger` |
+| **M × High** | Same as M × Low + mandatory `debugger` review per step |
+| **L × any** | `mentor` + `researcher` upfront → `planner` → critique → `implementer` → `debugger` |
+
+**The override-upward rule**: Risk overrides Size for model selection. S × High runs the M-tier model stack.
+
+---
+
+## Confidence propagation
+
+Every reasoning agent outputs a confidence level. Downstream agents read it and adapt.
+
+### Planner outputs `Confidence: High | Medium | Low`
+
+| Plan confidence | Mentor's response | Implementer's response |
+|---|---|---|
+| **High** | Standard critique | Standard execution |
+| **Medium** | Probe assumptions deeper | Note assumptions used per step |
+| **Low** | Don't auto-approve. Send back, OR escalate model tier and add per-step review checkpoint | Treat plan as draft. Verify with user after step 1, then between every step until confidence rises. |
+
+### Researcher outputs `Confidence: High | Medium | Low`
+- High = primary sources agree, recent, directly addresses question
+- Medium = primary source partial, or only secondary sources agree
+- Low = best inference; treat as starting point
+
+### Debugger outputs `Confidence in root cause: High | Medium | Low`
+- High = experiment directly confirmed; bug gone after fix
+- Medium = strongly inferred but not fully isolated; watch in prod
+- Low = best current theory; recommend monitoring + observability
+
+**Honesty matters more than looking decisive.** Agents are trained to flag Medium/Low when warranted instead of inflating to High. The signal is load-bearing.
+
+---
+
+## Prototype mode
+
+Tell mentor (or any agent): "**prototype mode**" or "this is exploratory."
+
+What happens:
+- Triage skipped
+- Routes directly to `implementer-fast`
+- Quality bar drops to "works enough to learn from"
+- Skip error handling, edge cases, defensive coding, tests
+- Comments minimal
+- BUT: risk-item escalation checklist (concurrency, security, data integrity) still applies
+
+When done prototyping, say "**harden it**" — mentor re-triages as M and runs the full flow on the prototype as input.
+
+This addresses the "too much ceremony for exploration" friction without creating a backdoor for risky shortcuts.
+
+---
+
+## Shared state: `agent_state.md`
+
+Optional but recommended for any project lasting more than a few sessions. A markdown file at the repo root that the user maintains. Agents read it for context but never write to it.
+
+What goes in it:
+- Stack and pinned versions
+- Conventions (style, testing, branching, logging)
+- Validated assumptions (things we've checked are true)
+- Known constraints (hard limits)
+- Decisions made (and why)
+- Open questions
+- Anti-patterns to avoid
+
+Agents will **suggest additions** in their output ("Suggested addition to agent_state.md: …") — you decide what to record. This pattern stops the "we keep relitigating the same decision" problem on long projects.
+
+The file `agent_state.md` in this distribution is a template — copy it to your repo root and fill it in.
 
 ---
 
@@ -34,146 +139,81 @@ Plus one bonus: debugger now does proactive "quick reviews" after non-trivial im
 mkdir -p .claude/agents
 ```
 
-Copy all 5 `.md` files into `.claude/agents/` (project-level) or `~/.claude/agents/` (global). Restart Claude Code.
+Copy all 8 agent `.md` files into `.claude/agents/` (project-level) or `~/.claude/agents/` (global). Restart Claude Code.
+
+Copy `agent_state.md` to your repo root if you want shared state.
 
 ### Step 2 — Add MCP servers (recommended)
-
-Built-in `WebSearch` is generic. For technical work, add these:
 
 **Context7 — version-accurate library docs**
 ```bash
 claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key YOUR_CONTEXT7_API_KEY
 ```
-Free key at `context7.com/dashboard`. Works without a key but rate-limited.
 
 **GitHub MCP — search issues, PRs, code**
 ```bash
 claude mcp add --scope user github -- npx -y @modelcontextprotocol/server-github
 ```
-Then:
 ```bash
 export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_your_token_here
 ```
-Create a token at `github.com/settings/tokens` with `repo` and `read:org` scopes.
 
 **Verify:**
 ```bash
 claude mcp list
-```
-And inside Claude Code: `/mcp`.
-
-### Step 3 — VS Code Copilot custom agents (global profile)
-
-If you want this same 5-agent system inside VS Code Copilot Chat, create these files under your user profile agents folder:
-
-`%APPDATA%\\Code\\User\\prompts\\agents\\mentor.agent.md`
-`%APPDATA%\\Code\\User\\prompts\\agents\\planner.agent.md`
-`%APPDATA%\\Code\\User\\prompts\\agents\\implementer.agent.md`
-`%APPDATA%\\Code\\User\\prompts\\agents\\debugger.agent.md`
-`%APPDATA%\\Code\\User\\prompts\\agents\\researcher.agent.md`
-
-Then reload VS Code and pick an agent from the Copilot Chat agent selector.
-
-Recommended usage in VS Code:
-
-1. Start with **mentor** for triage and routing.
-2. Use **planner** for M/L tasks before code edits.
-3. Use **implementer** for code changes (`learn mode` by default, `ship mode` when requested).
-4. Use **debugger** when tests fail or runtime behavior is unexpected.
-5. Use **researcher** when you need 2+ searches or multi-source comparison.
-
-Tool alias note for VS Code custom agents:
-
-- `read` = file reads
-- `search` = text/file search
-- `edit` = file edits
-- `execute` = terminal commands
-- `web` = web search/fetch
-- `agent` = subagent invocation
-- `todo` = task tracking
-
----
-
-## How the flows work
-
-### XS task flow (trivial fix)
-```
-You → implementer (directly)
-```
-No ceremony. Implementer does it, one paragraph of explanation.
-
-### S task flow (single file, clear scope)
-```
-You → mentor (1 response, concept + approach) → implementer
-```
-Skip planner. Mentor still teaches, implementer still codes in learn mode.
-
-### M task flow (multi-file, some risk)
-```
-You → mentor (triage, teach, approach) → planner (draft plan) → 
-mentor (CRITIQUE plan) → implementer (one step at a time) → 
-debugger (quick-review after non-trivial steps) → [debugger full-debug if bugs]
-```
-The mentor-critiques-plan step is the key addition — catches planner mistakes before they reach code.
-
-### L task flow (architectural / novel)
-```
-You → mentor → researcher (current best practices) → mentor (teach) → 
-planner (informed plan) → mentor (critique) → implementer → debugger
-```
-Researcher is pulled in up front to establish the 2026 landscape before planning.
-
-### Bug flow
-```
-debugger → [if root cause is a planning flaw] → feedback to planner → 
-planner updates assumptions
-```
-
-### Concept-confusion flow (new)
-```
-implementer notices user is confused → pauses → escalates to mentor → 
-mentor teaches → implementer resumes
 ```
 
 ---
 
 ## Mode signals you can use
 
-Tell the agents how you want to work:
-
-- **`fast mode`** — mentor skips Socratic questions, gives direct answer
-- **`ship mode`** — implementer writes minimal production code, no teaching comments
-- **`learn mode`** — default; verbose teaching comments (usually not needed to say)
-- **`triage this as S`** — override mentor's task-size classification
-- **`deep research`** — tell researcher to exceed its 5-search cap
-
----
-
-## Key design choices
-
-- **Mentor uses Opus** — teaching requires deep reasoning.
-- **Mentor has NO Write/Edit** — forced to teach, not silently solve.
-- **Planner has NO Bash/Write/Edit** — read-only. Forces clear assumptions instead of runtime poking.
-- **Implementer requires plan for M/L only** — XS/S can proceed without ceremony.
-- **Debugger forbids guess-and-check** — searches known issues first, hypothesizes second, fixes third.
-- **Researcher is isolated** — handles multi-source work so other agents keep clean context.
-- **Mentor reviews plans** — senior reviewer move, catches design flaws before they become code.
-- **Debugger feeds back to planner** — closes the loop so planning gets better over time.
+- `fast mode` — mentor skips Socratic, direct answer
+- `ship mode` — implementer writes minimal production code
+- `learn mode` — implementer's default, verbose teaching comments
+- `prototype mode` — bypass triage, fast-path to implementer-fast
+- `harden it` — re-triage prototype as M, run full flow
+- `triage this as M` (or S, L) — override mentor's classification
+- `high stakes` — force Risk = High even if mentor classified it Low
+- `deep research` — researcher exceeds its 5-search cap
 
 ---
 
 ## Tips to learn faster
 
-1. **Respect the triage.** If mentor says "this is M," don't push for S — the planning step is where most senior-level growth happens.
-2. **Read mentor's plan critique carefully.** That critique *is* the senior lesson. It teaches you what to look for when you read juniors' plans later.
-3. **Keep a `learnings.md`.** Log every mentor checkpoint question + your answer. Review monthly.
-4. **When out of ideas:** "mentor, give me 3 approaches with trade-offs" — unstuck framework.
-5. **When under deadline:** "fast mode + ship mode" — direct answer, minimal code, but still 2 sentences of reasoning so you learn something.
-6. **Use ship mode sparingly.** It's there for real time pressure, not as the default. Ship mode too often = no learning happens.
-7. **Verify citations.** If any agent claims a fact without a source, push back: "what's the source?" — trains you to hold yourself to the same standard.
+1. **Respect the triage.** If mentor says "M × High," don't push for "S × Low." The escalation is the lesson.
+2. **Read mentor's plan critique carefully.** That critique IS the senior lesson.
+3. **Watch escalations.** When `implementer-fast` escalates to full `implementer`, read the reason — that's "what makes this harder than it looks," exactly the senior intuition you're building.
+4. **Pay attention to Confidence: Low signals.** When planner or researcher flags Low confidence, ask why before continuing. The reason is usually a concept-shaped hole in your understanding.
+5. **Maintain `agent_state.md`.** Five minutes a week. Stops you from re-deriving the same conclusions month after month.
+6. **Use prototype mode on purpose.** Spike, learn, throw away, then harden. Don't let the prototype become production by accident — that's why "harden it" exists as an explicit step.
+7. **Keep `learnings.md` separately.** Every checkpoint question + your answer. Review monthly.
+8. **Verify citations.** If any agent claims a fact without a source, ask "what's the source?"
+
+---
+
+## What this system is good at
+
+✅ Backend systems with real correctness stakes
+✅ AI/ML pipelines (training, eval, inference)
+✅ DevOps / infra changes with rollback concerns
+✅ Structured refactoring with multi-file blast radius
+✅ Learning new architectural patterns deliberately
+✅ Debugging non-obvious failures
+
+## What it's less suited for
+
+⚠️ Highly ambiguous product/UX work — use prototype mode and don't expect deep teaching
+⚠️ Pure UI iteration — overhead exceeds benefit
+⚠️ Pair-programming on something you've done 100 times — use ship mode
+
+If you find yourself fighting the system on simple work, that's a signal: either use prototype/ship mode, or step outside the system entirely. The system is a teacher, not a yoke.
 
 ---
 
 ## Optional: CLAUDE.md
 
-A `CLAUDE.md` at the repo root describing your stack (framework versions, MLOps tools, conventions) makes all 5 agents far more accurate. Share your stack (ML framework + versions, MLOps, deploy target) and I'll write a tailored template.
+A `CLAUDE.md` at the repo root describing your stack makes all 8 agents far more accurate. Different file from `agent_state.md`:
+- `CLAUDE.md` — static project context (long-lived, rarely edited)
+- `agent_state.md` — evolving team memory (updated as work progresses)
+
+Share your stack (ML framework + versions, MLOps tools, deploy target) and a tailored `CLAUDE.md` template can be written.
