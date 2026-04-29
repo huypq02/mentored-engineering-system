@@ -1,219 +1,226 @@
-# Mentored Engineering System for Claude Code (v4)
+# Mentored Engineering System for Claude Code (v5)
 
-A multi-agent setup for engineers growing into senior AI/ML + DevOps roles. Learning-first, not automation-first. Now with **deterministic escalation triggers**, **Size × Risk triage**, **confidence propagation**, **prototype mode**, and **shared state via `agent_state.md`**.
+A multi-agent setup for engineers growing into senior AI/ML + DevOps roles. Learning-first, not automation-first. v5 adds **proper shared memory**, **lazy entry**, **fast-plan mode**, **bounded interpretation**, **exploratory debug**, and **explicit stop conditions**.
 
-## What's new in v4
+## What's new in v5
 
-v3 had the right architecture and right model routing. v4 closes five real-world failure modes that would only show up after weeks of use:
+v4 had the right architecture but its shared-memory implementation was shallow. v5 fixes that and addresses six other real-world friction points your testing surfaced:
 
-1. **Deterministic escalation triggers** — every lightweight agent now has an explicit checklist. If any item is checked, escalate. No judgment calls, no drift.
-2. **Size × Risk as first-class triage** — a 15-line concurrency patch is "S" by size but "High" by risk. Mentor classifies on both dimensions and routes accordingly.
-3. **Hard "interpretation = escalation" rule for Haiku** — `implementer-fast` escalates the moment a spec needs interpretation. Prevents the "Haiku confidently does the wrong thing" failure mode.
-4. **Confidence propagation** — `planner` outputs Low/Medium/High confidence; `mentor` and `implementer` adapt behavior based on it. `debugger` rates confidence in root cause too.
-5. **Prototype mode** — explicit fast-path that bypasses ceremony for exploratory work. "Harden it" command re-triages as M and runs full flow on the prototype.
-
-Plus: optional **`agent_state.md`** at repo root — a user-owned shared scratchpad agents read for context. Stops re-litigation of settled decisions across long sessions.
+1. **Three-layer state system** (`agent_state.md`, `session_state.md`, `patterns.md`) governed by `STATE_PROTOCOL.md` — explicit read rules per agent, explicit write triggers, conflict resolution, hygiene rules. Replaces v4's vague single-file state.
+2. **Lazy entry mode** — direct coding requests get fast-routed with retroactive triage announcement. Keeps flow natural without losing structure.
+3. **Confidence memory via patterns.md** — recurring confidence levels surface skill gaps over time. Confidence becomes a learning signal, not just routing.
+4. **Fast-plan mode** — `rough plan` signal makes planner emit compressed plans (3-5 steps) for low-risk M tasks. Reduces drag for users who know the territory. Forbidden for High-risk tasks.
+5. **Bounded interpretation** for `implementer-fast` — proceed with marked assumption ONLY when 5 strict conditions all hold (local scope, no business-logic effect, immediately observable, <5 line revert, no data mutation). Otherwise escalate.
+6. **Exploratory debug mode** for `debugger` — probe-first flow for messy bugs that don't yet support clean hypotheses. Returns to disciplined hypothesis testing once observation is sufficient.
+7. **Explicit stop conditions per tier** — defined in STATE_PROTOCOL.md. Prevents "one more review" loops.
 
 ---
 
-## All 8 agents (+ template)
+## File inventory
+
+### Agents (8 files, drop in `.claude/agents/`)
 
 | Agent | Role | Model |
 |---|---|---|
-| `mentor` | Triage on Size×Risk, teach, critique plans | Opus |
-| `mentor-light` | Compressed teaching for plain S × Low | Sonnet |
-| `planner` | Plans M/L changes (read-only, with Confidence) | Opus |
-| `implementer` | Executes plans for M/L (learn/ship modes) | Sonnet |
-| `implementer-fast` | XS/S × Low execution, prototype mode | Haiku |
-| `debugger` | Hypothesis-driven debug + review for M/L | Opus |
-| `debugger-light` | Compressed debug + quick review for S × Low | Sonnet |
-| `researcher` | Multi-source research (2+ search threshold) | Opus |
-| `agent_state.md` | User-owned shared context (template) | n/a |
+| `mentor.md` | Triage Size×Risk, teach, critique plans, lazy entry | Opus |
+| `mentor-light.md` | Compressed teaching for plain S × Low | Sonnet |
+| `planner.md` | Plans M/L (read-only), supports fast-plan mode | Opus |
+| `implementer.md` | Executes plans for M/L (learn/ship modes) | Sonnet |
+| `implementer-fast.md` | XS/S × Low execution, prototype mode, bounded interpretation | Haiku |
+| `debugger.md` | Hypothesis-driven + exploratory debug, reviews | Opus |
+| `debugger-light.md` | Compressed S × Low debug + quick reviews | Sonnet |
+| `researcher.md` | Multi-source research (2+ search threshold) | Opus |
+
+### State files (4 files, drop in repo root)
+
+| File | Purpose | Lifetime | Write authority |
+|---|---|---|---|
+| `STATE_PROTOCOL.md` | The read/write contract — every agent follows it | Permanent reference | Don't edit |
+| `agent_state.md` | Project-stable context (stack, conventions, decisions) | Months | User only |
+| `session_state.md` | Active task state | Hours-days | Agents propose, user confirms |
+| `patterns.md` | Meta-learning (confidence patterns, failure patterns, skill gaps) | Months, append-only | User only |
+
+---
+
+## How shared state works (the v4 problem fixed)
+
+In v4, agents were told "read agent_state.md if present" and "suggest additions if relevant." That was too vague — agents would re-read the whole file every turn (waste tokens), miss relevant sections (waste signal), or forget to suggest updates (waste learning).
+
+In v5, `STATE_PROTOCOL.md` defines exactly:
+
+**WHEN each agent reads each file:**
+- mentor reads all 3 files every M/L turn
+- mentor-light reads only `agent_state.md` (Conventions + Anti-patterns) once per session
+- implementer-fast skips agent_state.md entirely (too small to matter)
+- debugger reads all 3 every invocation
+- etc. (see STATE_PROTOCOL.md for full table)
+
+**WHICH sections matter to which agent:**
+- planner cares about: Stack, Conventions, Validated assumptions, Known constraints, Decisions, Anti-patterns
+- debugger cares about: Validated assumptions (any wrong now?), Anti-patterns (have we hit this before?), Failure patterns
+- mentor-light cares about: Conventions, Anti-patterns only
+
+**HOW conflicts resolve:**
+- State contradicts code → code wins, agent flags staleness explicitly
+- State contradicts conversation → state wins (state was deliberately recorded; conversation may be hallucinated)
+
+**WHEN to suggest updates** — each agent has explicit triggers, not "if relevant":
+- Planner suggests update when an external fact is verified (so it doesn't get re-verified)
+- Debugger suggests update when root cause reveals a new constraint, or when a bug pattern recurs
+- Researcher suggests update when finding has long-term value
+- etc.
+
+**HOW updates are formatted** — consistent structured suggestion that user copies:
+
+```
+## Suggested state updates
+
+### To agent_state.md
+- Section: Validated assumptions
+- Entry: "Production GPUs are A100-40GB" — verified by checking deployment config
+- Reason: Avoids re-verification on future infra tasks
+```
+
+User decides what to record. No agent ever writes to state files.
 
 ---
 
 ## Triage: Size × Risk
 
-Mentor classifies every task on both dimensions:
-
-### Size
-
-| | Definition |
+| Size | Definition |
 |---|---|
-| **XS** | < 20 lines, obvious fix, typo, rename, one-liner |
-| **S** | Single file, clear scope, no architectural decisions |
-| **M** | Multi-file, some risk, or new pattern |
-| **L** | Architectural, cross-cutting, novel territory |
+| XS | < 20 lines, obvious fix |
+| S | Single file, clear scope |
+| M | Multi-file or new pattern |
+| L | Architectural / cross-cutting / novel |
 
-### Risk
-
-| | Triggers (any one) |
+| Risk | Triggers (any one) |
 |---|---|
-| **Low** | None of the High triggers apply |
-| **High** | Concurrency, async, threads, shared state. Security (auth, secrets, injection, permissions). Data integrity (migrations, irreversible writes, financial). Production blast radius. Reproducibility-critical ML. External API contracts. User-flagged risk. |
+| Low | None of High applies |
+| High | Concurrency, async, shared state, security, data integrity, prod blast radius, ML reproducibility-critical, external API contracts, user-flagged risk, recurring failure pattern in this area |
 
 ### Routing
 
 | Triage | Flow |
 |---|---|
-| **XS × Low** | `implementer-fast` (Haiku) |
-| **XS × High** | `mentor` (Opus) → `implementer` (Sonnet) |
-| **S × Low** | `mentor-light` (Sonnet) → `implementer-fast` (Haiku) → optional `debugger-light` |
-| **S × High** | `mentor` (Opus) → `implementer` (Sonnet) → `debugger` (Opus) |
-| **M × Low** | `mentor` → `planner` → critique → `implementer` → `debugger` |
-| **M × High** | Same as M × Low + mandatory `debugger` review per step |
-| **L × any** | `mentor` + `researcher` upfront → `planner` → critique → `implementer` → `debugger` |
-
-**The override-upward rule**: Risk overrides Size for model selection. S × High runs the M-tier model stack.
+| XS × Low | `implementer-fast` (Haiku) |
+| XS × High | `mentor` (Opus) → `implementer` (Sonnet) |
+| S × Low | `mentor-light` → `implementer-fast` → optional `debugger-light` |
+| S × High | `mentor` → `implementer` → `debugger` |
+| M × Low | `mentor` → `planner` → critique → `implementer` → `debugger` |
+| M × High | Same + per-step debugger review mandatory |
+| L × any | `mentor` + `researcher` upfront → `planner` → critique → `implementer` → `debugger` |
 
 ---
 
-## Confidence propagation
+## Stop conditions (no infinite-loop reviews)
 
-Every reasoning agent outputs a confidence level. Downstream agents read it and adapt.
+Defined explicitly in STATE_PROTOCOL.md:
 
-### Planner outputs `Confidence: High | Medium | Low`
+| Triage | Stop when |
+|---|---|
+| XS × Low | implementer-fast completes |
+| XS × High | debugger quick-review = no Blockers |
+| S × Low | implementer-fast + (optional) debugger-light = no Blockers |
+| S × High | debugger Confidence ≥ Medium on fixes, or no issues found |
+| M × Low | implementer + debugger reviews = no Blockers |
+| M × High | All per-step reviews clear AND debugger Confidence ≥ Medium on bugs |
+| L × any | Full flow + checkpoints answered + no blocking Open questions |
 
-| Plan confidence | Mentor's response | Implementer's response |
-|---|---|---|
-| **High** | Standard critique | Standard execution |
-| **Medium** | Probe assumptions deeper | Note assumptions used per step |
-| **Low** | Don't auto-approve. Send back, OR escalate model tier and add per-step review checkpoint | Treat plan as draft. Verify with user after step 1, then between every step until confidence rises. |
-
-### Researcher outputs `Confidence: High | Medium | Low`
-- High = primary sources agree, recent, directly addresses question
-- Medium = primary source partial, or only secondary sources agree
-- Low = best inference; treat as starting point
-
-### Debugger outputs `Confidence in root cause: High | Medium | Low`
-- High = experiment directly confirmed; bug gone after fix
-- Medium = strongly inferred but not fully isolated; watch in prod
-- Low = best current theory; recommend monitoring + observability
-
-**Honesty matters more than looking decisive.** Agents are trained to flag Medium/Low when warranted instead of inflating to High. The signal is load-bearing.
+If criterion not met, the gap-detecting agent states what's missing rather than starting another loop.
 
 ---
 
-## Prototype mode
+## Mode signals
 
-Tell mentor (or any agent): "**prototype mode**" or "this is exploratory."
-
-What happens:
-- Triage skipped
-- Routes directly to `implementer-fast`
-- Quality bar drops to "works enough to learn from"
-- Skip error handling, edge cases, defensive coding, tests
-- Comments minimal
-- BUT: risk-item escalation checklist (concurrency, security, data integrity) still applies
-
-When done prototyping, say "**harden it**" — mentor re-triages as M and runs the full flow on the prototype as input.
-
-This addresses the "too much ceremony for exploration" friction without creating a backdoor for risky shortcuts.
-
----
-
-## Shared state: `agent_state.md`
-
-Optional but recommended for any project lasting more than a few sessions. A markdown file at the repo root that the user maintains. Agents read it for context but never write to it.
-
-What goes in it:
-- Stack and pinned versions
-- Conventions (style, testing, branching, logging)
-- Validated assumptions (things we've checked are true)
-- Known constraints (hard limits)
-- Decisions made (and why)
-- Open questions
-- Anti-patterns to avoid
-
-Agents will **suggest additions** in their output ("Suggested addition to agent_state.md: …") — you decide what to record. This pattern stops the "we keep relitigating the same decision" problem on long projects.
-
-The file `agent_state.md` in this distribution is a template — copy it to your repo root and fill it in.
+| Signal | Effect |
+|---|---|
+| `fast mode` | mentor skips Socratic, direct + 2-sentence reason |
+| `ship mode` | implementer writes minimal production code |
+| `learn mode` | implementer's default (verbose teaching) |
+| `prototype mode` | bypass triage, fast-path to implementer-fast |
+| `harden it` | re-triage prototype as M, run full flow |
+| `lazy entry` | (auto-detected on direct coding requests) — fast-route + retroactive triage |
+| `rough plan` / `fast-plan` | planner emits compressed plan; mentor critique compressed |
+| `exploratory debug` | debugger probes first, hypothesizes after observation |
+| `triage this as M` (or S, L) | override mentor's classification |
+| `high stakes` | force Risk = High |
+| `deep research` | researcher exceeds its 5-search cap |
 
 ---
 
 ## Installation
 
-### Step 1 — Drop agent files in place
+### Step 1 — Drop files in place
 
 ```bash
 mkdir -p .claude/agents
 ```
 
-Copy all 8 agent `.md` files into `.claude/agents/` (project-level) or `~/.claude/agents/` (global). Restart Claude Code.
+Copy the 8 agent `.md` files to `.claude/agents/` (project-level) or `~/.claude/agents/` (global).
 
-Copy `agent_state.md` to your repo root if you want shared state.
+Copy `STATE_PROTOCOL.md`, `agent_state.md`, `session_state.md`, `patterns.md` to your repo root. Fill in `agent_state.md` with your stack/conventions before first use.
+
+Restart Claude Code.
 
 ### Step 2 — Add MCP servers (recommended)
 
-**Context7 — version-accurate library docs**
+**Context7** — version-accurate library docs:
 ```bash
-claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key YOUR_CONTEXT7_API_KEY
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key YOUR_KEY
 ```
 
-**GitHub MCP — search issues, PRs, code**
+**GitHub MCP** — search issues/PRs/code:
 ```bash
 claude mcp add --scope user github -- npx -y @modelcontextprotocol/server-github
-```
-```bash
-export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_your_token_here
+export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_your_token
 ```
 
-**Verify:**
-```bash
-claude mcp list
-```
+Verify: `claude mcp list`.
 
 ---
 
-## Mode signals you can use
+## Tips for using v5 well
 
-- `fast mode` — mentor skips Socratic, direct answer
-- `ship mode` — implementer writes minimal production code
-- `learn mode` — implementer's default, verbose teaching comments
-- `prototype mode` — bypass triage, fast-path to implementer-fast
-- `harden it` — re-triage prototype as M, run full flow
-- `triage this as M` (or S, L) — override mentor's classification
-- `high stakes` — force Risk = High even if mentor classified it Low
-- `deep research` — researcher exceeds its 5-search cap
-
----
-
-## Tips to learn faster
-
-1. **Respect the triage.** If mentor says "M × High," don't push for "S × Low." The escalation is the lesson.
-2. **Read mentor's plan critique carefully.** That critique IS the senior lesson.
-3. **Watch escalations.** When `implementer-fast` escalates to full `implementer`, read the reason — that's "what makes this harder than it looks," exactly the senior intuition you're building.
-4. **Pay attention to Confidence: Low signals.** When planner or researcher flags Low confidence, ask why before continuing. The reason is usually a concept-shaped hole in your understanding.
-5. **Maintain `agent_state.md`.** Five minutes a week. Stops you from re-deriving the same conclusions month after month.
-6. **Use prototype mode on purpose.** Spike, learn, throw away, then harden. Don't let the prototype become production by accident — that's why "harden it" exists as an explicit step.
-7. **Keep `learnings.md` separately.** Every checkpoint question + your answer. Review monthly.
-8. **Verify citations.** If any agent claims a fact without a source, ask "what's the source?"
+1. **Fill in `agent_state.md` upfront.** Stack + Conventions + Anti-patterns. 15 minutes. Pays back within a day.
+2. **Maintain `patterns.md` weekly.** When you notice a confidence pattern (planner Low on infra X, debugger Medium on async Y), record it. Surfaces real skill gaps.
+3. **Don't fight escalations.** When `implementer-fast` escalates, read the reason. That's the lesson.
+4. **Use lazy entry liberally.** Don't preface every request with "explain to me how to…" — just ask for what you want, the system figures out the rest.
+5. **Use bounded interpretation cautiously.** When implementer-fast applies it, verify the marked assumption matches your intent. The 5 conditions are strict but Haiku can still misjudge.
+6. **Watch the stop conditions.** When work is declared done by the system, that's intentional. Don't ask for "one more review" out of habit — the criteria were calibrated.
+7. **Read STATE_PROTOCOL.md once.** Then trust it. The whole system depends on agents following it consistently.
 
 ---
 
-## What this system is good at
+## What v5 is good at
 
 ✅ Backend systems with real correctness stakes
 ✅ AI/ML pipelines (training, eval, inference)
 ✅ DevOps / infra changes with rollback concerns
-✅ Structured refactoring with multi-file blast radius
-✅ Learning new architectural patterns deliberately
-✅ Debugging non-obvious failures
+✅ Multi-week projects where state continuity matters
+✅ Learning new patterns deliberately
+✅ Debugging non-obvious failures with exploratory mode
+✅ Spotting your own skill gaps over time via patterns.md
 
-## What it's less suited for
+## What it's still less suited for
 
-⚠️ Highly ambiguous product/UX work — use prototype mode and don't expect deep teaching
-⚠️ Pure UI iteration — overhead exceeds benefit
-⚠️ Pair-programming on something you've done 100 times — use ship mode
+⚠️ Highly ambiguous product/UX work — use prototype mode
+⚠️ Pure UI iteration loops — overhead exceeds benefit
+⚠️ Rote work you've done 100 times — use ship mode
 
-If you find yourself fighting the system on simple work, that's a signal: either use prototype/ship mode, or step outside the system entirely. The system is a teacher, not a yoke.
+If fighting the system on simple work, that's a signal: use prototype/ship mode, or step outside.
 
 ---
 
 ## Optional: CLAUDE.md
 
-A `CLAUDE.md` at the repo root describing your stack makes all 8 agents far more accurate. Different file from `agent_state.md`:
-- `CLAUDE.md` — static project context (long-lived, rarely edited)
-- `agent_state.md` — evolving team memory (updated as work progresses)
+A `CLAUDE.md` at repo root holds **static project context** — different from `agent_state.md`:
+
+| File | Content | Updates |
+|---|---|---|
+| `CLAUDE.md` | Long-lived, rarely-edited project description (used by Claude Code globally) | Rarely |
+| `agent_state.md` | Evolving validated assumptions, decisions, anti-patterns | As work progresses |
+| `session_state.md` | Active task | Per session |
+| `patterns.md` | Meta-learning over months | Append weekly |
 
 Share your stack (ML framework + versions, MLOps tools, deploy target) and a tailored `CLAUDE.md` template can be written.
