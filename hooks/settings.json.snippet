@@ -1,0 +1,47 @@
+{
+  "_comment": "Add this hooks block to your ~/.claude/settings.json. If you already have hooks, merge the arrays.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/secrets-scan.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/tests-before-commit.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/format-python.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "debugger|debugger-light",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/debugger-completion-log.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

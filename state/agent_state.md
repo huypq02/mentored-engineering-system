@@ -1,8 +1,8 @@
-# agent_state.md — Project-Stable Context
+# agent_state.md — Project Contract
 
-**Lifetime: months. Write authority: user only.** Agents read this for stable project context. They suggest additions in their output; you decide what to record.
+**Lifetime: months. Write authority: user only.** Agents read this for stable project context. They suggest additions in their output; you decide what to record. Native auto-memory handles transient learning — this file holds the deliberate contract.
 
-Keep under 200 lines. If it grows, archive old sections to `agent_state.archive.md`.
+Keep under 200 lines.
 
 ---
 
@@ -12,8 +12,6 @@ Keep under 200 lines. If it grows, archive old sections to `agent_state.archive.
 
 ## Stack
 
-<!-- Pin versions. -->
-
 - Language: <e.g., Python 3.11>
 - ML framework: <e.g., PyTorch 2.6>
 - MLOps: <e.g., MLflow 2.x, DVC>
@@ -21,8 +19,6 @@ Keep under 200 lines. If it grows, archive old sections to `agent_state.archive.
 - Observability: <e.g., Datadog, Prometheus>
 
 ## Conventions
-
-<!-- Things that took effort to establish; agents should follow without re-litigation -->
 
 - Code style: <e.g., black + ruff, line length 100>
 - Testing: <e.g., pytest, fixtures in conftest.py>
@@ -34,22 +30,21 @@ Keep under 200 lines. If it grows, archive old sections to `agent_state.archive.
 
 <!-- Things we've verified are true. Don't re-verify these unless they could plausibly have changed. -->
 
-- <YYYY-MM-DD> <e.g., "Production GPUs are A100-40GB"> — verified by <agent or user>
-- <YYYY-MM-DD> <e.g., "Data pipeline emits sorted timestamps"> — verified by debugger
+- <YYYY-MM-DD> "Production GPUs are A100-40GB" — verified by checking deployment config
+- <YYYY-MM-DD> "Data pipeline emits sorted timestamps" — verified by debugger
 
 ## Known constraints
 
 <!-- Hard limits that bound the design space -->
 
-- <e.g., "Inference latency budget: p99 < 200ms">
-- <e.g., "Cannot upgrade torch past 2.6 until vendor X supports it">
-- <e.g., "Training data PII must not leave region us-west-2">
+- "Inference latency budget: p99 < 200ms"
+- "Cannot upgrade torch past 2.6 until vendor X supports it"
+- "Training data PII must not leave region us-west-2"
 
 ## Decisions made
 
 <!-- Architectural / design decisions that shouldn't be reopened casually -->
 
-- <YYYY-MM-DD> — <decision> — <one-sentence rationale>
 - <YYYY-MM-DD> — <decision> — <one-sentence rationale>
 
 ## Open questions
@@ -62,8 +57,8 @@ Keep under 200 lines. If it grows, archive old sections to `agent_state.archive.
 
 <!-- Mistakes already made; don't repeat -->
 
-- <e.g., "Don't use mp.spawn — use torchrun. Spawn caused issues in March 2026.">
-- <e.g., "Don't hand-roll retry logic — use tenacity, standardized.">
+- "Don't use mp.spawn — use torchrun. Spawn caused issues in March 2026."
+- "Don't hand-roll retry logic — use tenacity, standardized."
 
 ---
 
