@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh — one-command setup for the Mentored Engineering System v6
+# install.sh — one-command setup for the Mentored Engineering System v6 (fixed)
 # Run from inside the v6/ directory at the root of your project.
 #
 # Usage:
@@ -26,38 +26,35 @@ for arg in "$@"; do
   case "$arg" in
     --hooks) INSTALL_HOOKS=true ;;
     --user-agents) USER_AGENTS=true ;;
-    --all) INSTALL_HOOKS=true; USER_AGENTS=true ;;
+    --all) INSTALL_HOOKS=true ;;
     *) echo "Unknown arg: $arg" >&2; exit 2 ;;
   esac
 done
 
-echo -e "${BLUE}=== Mentored Engineering System v6 — Install ===${NC}"
+echo -e "${BLUE}=== Mentored Engineering System v6 (fixed) — Install ===${NC}"
 echo ""
 
 # 1. Agents
 if $USER_AGENTS; then
   AGENTS_DIR="$HOME/.claude/agents"
-  echo -e "${YELLOW}Installing agents to user scope: $AGENTS_DIR${NC}"
+  SKILLS_DIR="$HOME/.claude/skills"
+  echo -e "${YELLOW}Installing agents and skills to user scope (~/.claude/)${NC}"
+  echo -e "${BLUE}Note: state files still go in your project root (not ~/.claude/)${NC}"
 else
   AGENTS_DIR=".claude/agents"
-  echo -e "${YELLOW}Installing agents to project scope: $AGENTS_DIR${NC}"
+  SKILLS_DIR=".claude/skills"
+  echo -e "${YELLOW}Installing agents and skills to project scope (.claude/)${NC}"
 fi
 mkdir -p "$AGENTS_DIR"
 cp "$V6_DIR"/agents/*.md "$AGENTS_DIR/"
-echo -e "${GREEN}OK${NC} — 8 agents installed"
+echo -e "${GREEN}OK${NC} — 8 agents installed to $AGENTS_DIR"
 echo ""
 
-# 2. Skills (global scope when --user-agents, otherwise project scope)
-if $USER_AGENTS; then
-  SKILLS_DIR="$HOME/.claude/skills"
-  echo -e "${YELLOW}Installing skills to user scope: $SKILLS_DIR${NC}"
-else
-  SKILLS_DIR=".claude/skills"
-  echo -e "${YELLOW}Installing skills to: $SKILLS_DIR${NC}"
-fi
+# 2. Skills
+echo -e "${YELLOW}Installing skills to: $SKILLS_DIR${NC}"
 mkdir -p "$SKILLS_DIR"
 cp -r "$V6_DIR"/skills/* "$SKILLS_DIR/"
-echo -e "${GREEN}OK${NC} — 5 skills installed"
+echo -e "${GREEN}OK${NC} — 7 skills installed (including state-file-resolver)"
 echo ""
 
 # 3. State files (only if not already present — never overwrite user content)
@@ -108,13 +105,17 @@ echo ""
 echo "  2. Restart Claude Code so it picks up the new agents and skills."
 echo ""
 if ! $INSTALL_HOOKS; then
-  echo "  3. (Optional but recommended) Re-run with --hooks to install the 4 enforcement hooks:"
+  echo "  3. (Optional but recommended) Re-run with --hooks to install enforcement hooks:"
   echo "       bash install.sh --hooks"
   echo ""
 fi
-echo "  4. (Optional but recommended) Add MCP servers for richer technical research:"
+echo "  4. (Optional) Add MCP servers for richer technical research:"
 echo "       claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp"
 echo "       claude mcp add --scope user github -- npx -y @modelcontextprotocol/server-github"
 echo "       export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_..."
+echo ""
+echo "  NOTE: state files (agent_state.md, patterns.md, STATE_PROTOCOL.md) are"
+echo "  always at your project root — never in ~/.claude/. Agents locate them"
+echo "  at runtime via 'git rev-parse --show-toplevel'."
 echo ""
 echo -e "${GREEN}Done.${NC} Read README.md for the full system overview."
