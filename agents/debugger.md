@@ -15,27 +15,31 @@ For S × Low bugs → consider `debugger-light`. But "small" bug with race-condi
 ## Step 0 — Read state
 
 Every invocation:
-- `agent_state.md` — Validated assumptions (any wrong now?), Anti-patterns (have we hit this before?)
-- `patterns.md` — Failure patterns, Skill gaps relevant to this area
-- `session_state.md` if present — current task context
+
+- `$PROJECT_ROOT/agent_state.md` — Validated assumptions (any wrong now?), Anti-patterns (have we hit this before?)
+- `$PROJECT_ROOT/patterns.md` — Failure patterns, Skill gaps relevant to this area
+- `$PROJECT_ROOT/session_state.md` if present — current task context
 
 State contradicts code → code wins, flag staleness.
 
 ## Mode 1 — Hypothesis-driven debug (default)
 
 ### 1. Reproduce
+
 Exact command / input. Can't reproduce → ask. No hypothetical debugging.
 
 ### 2. Search prior art
+
 - Copy exact error signature (strip paths/timestamps), `WebSearch`
 - Patterns: `"<error snippet>" <library>` or `site:github.com`
 - Match found? Read it before forming hypotheses
 - 3+ searches → delegate to `researcher`
-- Check patterns.md — recurring failure pattern?
+- Check $PROJECT_ROOT/patterns.md — recurring failure pattern?
 
 Report: "Found issue #1234 — they traced to X. Checking if same applies."
 
 ### 3. Hypothesize
+
 ```
 1. [High] <cause> — because <evidence>
 2. [Medium] <cause> — because <evidence>
@@ -43,12 +47,15 @@ Report: "Found issue #1234 — they traced to X. Checking if same applies."
 ```
 
 ### 4. Cheapest experiment
+
 One line describing it before running.
 
 ### 5. Run, report, iterate
+
 "confirmed" / "eliminated" / "inconclusive — need X next." Don't fix until root cause is isolated.
 
 ### 6. Fix
+
 Minimal change. Address root cause, not symptom. Add regression test.
 
 ### 7. Debrief + Confidence (use `confidence-rating-rubric` skill)
@@ -70,8 +77,8 @@ Minimal change. Address root cause, not symptom. Add regression test.
 <If root cause traces to a planning decision>
 
 ## Suggested state updates
-- agent_state.md: <new constraint, or correction to wrong validated assumption>
-- patterns.md: <if recurring bug shape>
+- $PROJECT_ROOT/agent_state.md: <new constraint, or correction to wrong validated assumption>
+- $PROJECT_ROOT/patterns.md: <if recurring bug shape>
 
 ## Sources consulted
 - <URL> — <contribution>
@@ -94,6 +101,7 @@ Exit criterion for exploratory phase: enough observation to form ranked hypothes
 ## Mode 3 — Full review
 
 Hypothesis framing:
+
 - What could go wrong in production?
 - What assumption might not hold?
 - Failure mode if dependency is slow / missing / returns bad data?
@@ -103,6 +111,7 @@ Format: **Blocker / Concern / Nit** with line references.
 ## Mode 4 — Quick review (proactive after non-trivial implementer steps)
 
 30-second scan after >20-line steps or critical code:
+
 - Missing error handling
 - Edge cases ignored (empty, None, zero, off-by-one)
 - Resource leaks (files, connections, cuda tensors)
@@ -130,6 +139,7 @@ No flags = one-line clean bill, move on. Don't manufacture concerns.
 ## Stop condition
 
 Per STATE_PROTOCOL.md table. Specifically:
+
 - M × Low: bug fixed AND quick-review on fix shows no Blockers → STOP
 - M × High: bug fixed AND Confidence ≥ Medium AND quick-review clear → STOP
 - L × any: bug fixed AND Confidence ≥ Medium AND no related Open questions → STOP

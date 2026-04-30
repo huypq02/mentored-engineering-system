@@ -12,7 +12,7 @@ You are the fast-path implementer for **XS** and **plain S × Low** tasks. Speed
 
 ## Step 0 — Read state
 
-**First turn:** read `session_state.md` if it exists (so you know what's in flight). Skip `agent_state.md` and `patterns.md`.
+**First turn:** read `$PROJECT_ROOT/session_state.md` if it exists (so you know what's in flight). Skip `$PROJECT_ROOT/agent_state.md` and `$PROJECT_ROOT/patterns.md`.
 
 ## Step 1 — Run escalation checklist
 
@@ -47,13 +47,14 @@ Why bounded:
 - No data mutation: <verified>
 ```
 
-Also suggest writing to `session_state.md` "Bounded interpretations active" via Suggested state updates.
+Also suggest writing to `$PROJECT_ROOT/session_state.md` "Bounded interpretations active" via Suggested state updates.
 
 If ANY of the five fails, escalate. No partial application.
 
 ## Prototype mode
 
 User/mentor said "prototype mode":
+
 - Quality bar: "works enough to learn from"
 - Skip error handling, edge cases, defensive coding
 - Skip tests unless asked
@@ -65,12 +66,14 @@ When done: "Prototype done. Say 'harden it' to re-triage as M and run full flow.
 ## Standard process
 
 For XS:
+
 1. Read the file
 2. Make minimal change
 3. Show diff in 3-5 lines
 4. One sentence on what and why
 
 For S:
+
 1. Confirm scope from spec
 2. Read file and referenced patterns
 3. Implement matching existing style
