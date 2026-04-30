@@ -8,7 +8,7 @@ When a feature is complete, archive this file (rename to `session_state.<feature
 
 ## Active feature
 
-**Slug**: <feature-name> (matches `claude -c -r <slug>` for resuming)
+**Slug**: <feature-name>  (matches `claude -c -r <slug>` for resuming)
 **Triage**: <Size × Risk>
 **Status**: <planning | implementing | debugging | reviewing | done>
 **Started**: <date>
@@ -25,7 +25,7 @@ When a feature is complete, archive this file (rename to `session_state.<feature
 
 ## In-flight decisions
 
-<!-- Decisions made during this feature, not yet promoted to $PROJECT_ROOT/agent_state.md -->
+<!-- Decisions made during this feature, not yet promoted to agent_state.md -->
 
 - <decision> — made by <agent or user> on <date>
 
@@ -39,14 +39,14 @@ When a feature is complete, archive this file (rename to `session_state.<feature
 
 <!-- Things deferred but not forgotten -->
 
--
+- 
 
 ## Notes from sessions
 
 <!-- Anything worth carrying forward not yet structured -->
 
--
+- 
 
 ---
 
-_Last touched: <date>_
+*Last touched: <date>*

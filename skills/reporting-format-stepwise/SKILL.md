@@ -35,8 +35,8 @@ All 5 conditions verified: <yes>
 <one sentence on the pattern or concept worth remembering>
 
 ### Suggested state updates (only if any)
-- $PROJECT_ROOT/agent_state.md (<section>): <entry> — <why worth recording>
-- $PROJECT_ROOT/patterns.md (<section>): <entry>
+- agent_state.md (<section>): <entry> — <why worth recording>
+- patterns.md (<section>): <entry>
 
 ### Next
 Step <N+1>: <title>. Ready when you say continue.

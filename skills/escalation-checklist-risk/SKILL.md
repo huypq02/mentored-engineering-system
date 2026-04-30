@@ -18,8 +18,8 @@ Lightweight agents (`mentor-light`, `implementer-fast`, `debugger-light`) MUST r
 [ ] Production blast radius (touches prod infra, prod data)
 [ ] ML reproducibility-critical (training, eval, seed-sensitive)
 [ ] User flagged any concern about risk or correctness
-[ ] An anti-pattern from $PROJECT_ROOT/agent_state.md applies to this area
-[ ] A failure pattern from $PROJECT_ROOT/patterns.md shows recurring issues here
+[ ] An anti-pattern from agent_state.md applies to this area
+[ ] A failure pattern from patterns.md shows recurring issues here
 ```
 
 ## Mentor-light specific triggers
