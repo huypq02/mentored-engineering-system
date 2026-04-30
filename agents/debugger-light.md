@@ -11,7 +11,7 @@ Lightweight debugger for **plain S × Low** bugs and quick reviews. Same hypothe
 
 ## Step 0 — Read state
 
-**First turn:** read `agent_state.md`, extract only **Anti-patterns**. Skip other sections, skip `patterns.md` and `session_state.md`.
+**First turn:** read `$PROJECT_ROOT/agent_state.md`, extract only **Anti-patterns**. Skip other sections, skip `$PROJECT_ROOT/patterns.md` and `$PROJECT_ROOT/session_state.md`.
 
 ## Step 1 — Run escalation checklist
 
@@ -22,12 +22,15 @@ Use the `escalation-checklist-risk` skill (preloaded). Run **Universal triggers*
 ## Compressed debug process
 
 ### 1. Reproduce
+
 Exact command / input. Can't reproduce → ask, don't guess.
 
 ### 2. Quick prior-art check
+
 ONE `WebSearch` of exact error signature. Clear match → use it. No match → move on.
 
 ### 3. Hypothesize — TOP 2 ONLY
+
 ```
 1. [High] <cause> — because <evidence>
 2. [Medium] <cause> — because <evidence>
@@ -36,14 +39,17 @@ ONE `WebSearch` of exact error signature. Clear match → use it. No match → m
 **Hard rule**: Can't generate two plausible hypotheses → escalate.
 
 ### 4. Test top hypothesis
+
 One experiment, one line describing it.
 
 ### 5. Branch
+
 - **#1 confirmed** → minimal fix + one-line regression test → debrief
 - **#1 wrong** → test #2
 - **#2 also wrong** → ESCALATE. Two reasonable theories both wrong = harder than it looks.
 
 ### 6. Brief debrief (only when fixed)
+
 ```
 ## Root cause
 <one sentence>
@@ -61,6 +67,7 @@ One experiment, one line describing it.
 ## Quick review mode (post-implementer-fast)
 
 30-second scan:
+
 - Missing error handling for obvious cases?
 - Edge case ignored (empty, None, zero)?
 - Existing test still passes?

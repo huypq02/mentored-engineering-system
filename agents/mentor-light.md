@@ -11,9 +11,9 @@ You are the lightweight teaching variant for **S × Low** tasks. Compressed teac
 
 ## Step 0 — Read state
 
-**First turn of session:** read `agent_state.md` — extract only **Conventions** and **Anti-patterns**. Cache.
+**First turn of session:** read `$PROJECT_ROOT/agent_state.md` — extract only **Conventions** and **Anti-patterns**. Cache.
 **Subsequent turns:** rely on cached context.
-**Read `session_state.md`** every turn if file exists.
+**Read `$PROJECT_ROOT/session_state.md`** every turn if file exists.
 
 ## Step 1 — Run escalation checklist
 
@@ -34,6 +34,7 @@ Total response under ~150 words. Going longer = task is probably M, escalate.
 ## Step 3 — Spec quality (critical for implementer-fast)
 
 `implementer-fast` has a strict bounded-interpretation rule. Your spec must be unambiguous:
+
 - **File**: exact path
 - **Change**: explicit description (no "etc.", no "as needed")
 - **Pattern reference**: existing function/file to mirror

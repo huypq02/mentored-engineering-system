@@ -15,16 +15,16 @@ rm .claude/agents/debugger.md
 rm .claude/agents/debugger-light.md
 rm .claude/agents/researcher.md
 
-# Remove session_state.md if you weren't using it for L tasks
+# Remove $PROJECT_ROOT/session_state.md if you weren't using it for L tasks
 # (It's now optional; keep it only if you have ongoing multi-day work)
-# rm session_state.md   # only if not in active use
+# rm $PROJECT_ROOT/session_state.md   # only if not in active use
 ```
 
 ## What to keep as-is
 
 ```
-agent_state.md     # your project contract — keep all your customizations
-patterns.md        # your meta-learning — append-only, keep everything
+$PROJECT_ROOT/agent_state.md     # your project contract — keep all your customizations
+$PROJECT_ROOT/patterns.md        # your meta-learning — append-only, keep everything
 ```
 
 These files don't change format between v5 and v6.
@@ -50,6 +50,7 @@ cp v6/STATE_PROTOCOL.md ./STATE_PROTOCOL.md   # overwrite v5 version
 ```
 
 Or just run the install script:
+
 ```bash
 bash v6/install.sh --hooks
 ```
@@ -66,7 +67,7 @@ After upgrade, you'll notice:
 
 4. **Style enforcement is sharper.** With hooks installed, secret commits get blocked, Python files auto-format, and `git commit` requires tests-run-this-session. None of this happened in v5.
 
-5. **`session_state.md` may be missing.** That's fine — it's now optional. If you don't have multi-day work, you don't need it.
+5. **`$PROJECT_ROOT/session_state.md` may be missing.** That's fine — it's now optional. If you don't have multi-day work, you don't need it.
 
 ## What stays the same
 
@@ -97,6 +98,7 @@ You: "I want to add distributed training across 4 GPUs"
 Expected: `mentor` triages as L × High, suggests Extended Thinking + `/plan` + named session, asks a Socratic question, hands to `researcher` for current 2026 best practices, then to `planner`. That's the L-task power-up path working.
 
 If either of these doesn't behave as expected, check that:
+
 1. Skills are in `.claude/skills/` and accessible
 2. Agent files have `skills:` in their YAML frontmatter
 3. You restarted Claude Code after install

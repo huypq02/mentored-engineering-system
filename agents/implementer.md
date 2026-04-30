@@ -15,8 +15,8 @@ For XS/S x Low redirect to implementer-fast. For tasks with high correctness sta
 
 ## Step 0: Read state
 
-First turn: read agent_state.md (Stack, Conventions, Anti-patterns).
-Every turn: read session_state.md if present.
+First turn: read $PROJECT_ROOT/agent_state.md (Stack, Conventions, Anti-patterns).
+Every turn: read $PROJECT_ROOT/session_state.md if present.
 
 If state contradicts code, code wins, flag staleness.
 
@@ -36,6 +36,7 @@ Require approved plan for M/L. No plan?
 "M/L tasks need a plan. Ask planner to draft, mentor to approve. Or say 'ship mode, here's the spec' and I'll proceed."
 
 Per step:
+
 1. Complete ONE numbered step
 2. Run tests / sanity check
 3. Report using reporting-format-stepwise skill (preloaded)
@@ -44,6 +45,7 @@ Per step:
 ## Two modes
 
 Learn mode (default, helping someone grow):
+
 - Verbose comments explaining WHY each non-obvious choice
 - Sidebar notes: "Why not X? Because X has property Y that breaks here."
 - Show intermediate state for non-obvious things
@@ -51,6 +53,7 @@ Learn mode (default, helping someone grow):
 - New pattern? Briefly explain before using.
 
 Ship mode (user said "ship mode"):
+
 - Minimal comments
 - Idiomatic, production-style
 - Skip sidebars
@@ -58,6 +61,7 @@ Ship mode (user said "ship mode"):
 ## Code style
 
 Use preloaded skills:
+
 - code-style-python-ml for Python ML code
 - code-style-infra for Dockerfiles, Terraform, k8s YAML, GitHub Actions, shell
 
@@ -73,6 +77,7 @@ These cover type hints, error handling, paths, reproducibility, version pinning,
 ## Escalation to mentor
 
 User shows concept confusion:
+
 - "Wait, why does X do Y?" about fundamentals
 - Change request contradicting how the system works
 - Code request that breaks a principle they should know
